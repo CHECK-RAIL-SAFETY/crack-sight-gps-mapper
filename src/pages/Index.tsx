@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { saveGpsLogs, completeSession } from "@/services/supabaseService";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { FileUp } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ const Index = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeSession, setActiveSession] = useState<{ id: string; name: string } | null>(null);
+  const [gpsParseError, setGpsParseError] = useState<string | null>(null);
 
   const handleFramesUploaded = (files: FileList) => {
     // Convert FileList to array and filter for image files
@@ -30,10 +33,17 @@ const Index = () => {
     );
     
     setFrames(imageFiles);
+    
+    if (imageFiles.length === 0) {
+      toast.warning("No valid frame images found. Frame images should be named like 0.jpg, 1.jpg, etc.");
+    } else {
+      toast.success(`Uploaded ${imageFiles.length} frames`);
+    }
   };
 
   const handleGpsLogUploaded = (file: File) => {
     setGpsLog(file);
+    setGpsParseError(null);
     parseGpsLog(file);
   };
 
@@ -49,13 +59,17 @@ const Index = () => {
         const dataLines = lines.slice(1);
         
         const parsedData: GpsLogEntry[] = [];
+        let parseErrors = 0;
         
         for (const line of dataLines) {
           if (!line.trim()) continue;
           
           const [second, latitude, longitude, accuracy] = line.split(',');
           
-          if (!second || !latitude || !longitude || !accuracy) continue;
+          if (!second || !latitude || !longitude || !accuracy) {
+            parseErrors++;
+            continue;
+          }
           
           parsedData.push({
             second: parseInt(second.trim()),
@@ -63,6 +77,16 @@ const Index = () => {
             longitude: parseFloat(longitude.trim()),
             accuracy: parseFloat(accuracy.trim())
           });
+        }
+        
+        if (parsedData.length === 0) {
+          setGpsParseError("No valid GPS data found in the file. Please check the format.");
+          toast.error("Failed to parse GPS data");
+          return;
+        }
+        
+        if (parseErrors > 0) {
+          toast.warning(`Parsed GPS data with ${parseErrors} invalid entries`);
         }
         
         setGpsData(parsedData);
@@ -81,7 +105,8 @@ const Index = () => {
         }
       } catch (error) {
         console.error("Error parsing GPS log:", error);
-        toast.error("Error parsing GPS log file. Please check the format.");
+        setGpsParseError("Error parsing GPS log file. Please check the format.");
+        toast.error("Error parsing GPS log file");
       }
     };
     
@@ -147,14 +172,33 @@ const Index = () => {
               />
             </Card>
 
-            {frames.length > 0 && gpsData.length > 0 && (
-              <FrameList 
-                frames={frames}
-                gpsData={gpsData}
-                onFrameProcess={handleFrameProcessed}
-                isProcessing={isProcessing}
-                sessionId={activeSession.id}
-              />
+            {gpsParseError && (
+              <Alert variant="destructive">
+                <AlertTitle>GPS Data Error</AlertTitle>
+                <AlertDescription>{gpsParseError}</AlertDescription>
+              </Alert>
+            )}
+
+            {frames.length > 0 && (
+              <>
+                {gpsData.length === 0 ? (
+                  <Alert variant="default" className="bg-amber-50 border-amber-200">
+                    <FileUp className="h-4 w-4 text-amber-600" />
+                    <AlertTitle>GPS Data Required</AlertTitle>
+                    <AlertDescription>
+                      Please upload a GPS log file to match with the frames before processing.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <FrameList 
+                    frames={frames}
+                    gpsData={gpsData}
+                    onFrameProcess={handleFrameProcessed}
+                    isProcessing={isProcessing}
+                    sessionId={activeSession.id}
+                  />
+                )}
+              </>
             )}
 
             {results.length > 0 && (

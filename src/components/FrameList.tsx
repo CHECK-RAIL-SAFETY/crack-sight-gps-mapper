@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { GpsLogEntry, ProcessedFrame, Prediction } from "@/types";
 import { toast } from "sonner";
 import { saveProcessedFrame, updateSessionStats } from "@/services/supabaseService";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface FrameListProps {
   frames: File[];
@@ -18,6 +20,10 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   const [processingFrames, setProcessingFrames] = useState<Set<string>>(new Set());
   const [processedCount, setProcessedCount] = useState(0);
   const [crackCount, setCrackCount] = useState(0);
+  const [frameWithoutGps, setFrameWithoutGps] = useState<string[]>([]);
+
+  // Roboflow API key
+  const ROBOFLOW_API_KEY = "rf_iLgnh9YZilWn2Zcw9vRK2DxQrzs2";
 
   useEffect(() => {
     // Update session stats when counts change and we have a sessionId
@@ -30,7 +36,25 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   const findGpsDataForFrame = (frameId: string): GpsLogEntry | null => {
     // Extract the frame timestamp (assuming format like "123.jpg")
     const second = parseInt(frameId.split(".")[0]);
-    return gpsData.find((entry) => entry.second === second) || null;
+    
+    // First try exact match
+    let match = gpsData.find((entry) => entry.second === second);
+    
+    // If no exact match, try to find the closest timestamp
+    if (!match && gpsData.length > 0) {
+      // Sort by closest time difference
+      const sorted = [...gpsData].sort((a, b) => 
+        Math.abs(a.second - second) - Math.abs(b.second - second)
+      );
+      
+      // Use the closest match if it's within 5 seconds
+      if (Math.abs(sorted[0].second - second) <= 5) {
+        match = sorted[0];
+        console.log(`No exact GPS match for frame ${frameId}, using closest match at second ${match.second}`);
+      }
+    }
+    
+    return match;
   };
 
   const processFrame = async (frame: File) => {
@@ -40,6 +64,7 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       
       if (!gpsEntry) {
         toast.error(`No GPS data found for frame ${frameId}`);
+        setFrameWithoutGps(prev => [...prev, frameId]);
         return;
       }
 
@@ -49,15 +74,14 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       const formData = new FormData();
       formData.append("image", frame);
       
-      // Make API call to Roboflow endpoint
-      // Updated to use a working API key - this is the correct format for Roboflow API keys
+      // Make API call to Roboflow endpoint with updated API key
       const response = await fetch(
         "https://detect.roboflow.com/railway-crack-detection/15",
         {
           method: "POST",
           body: formData,
           headers: {
-            "X-API-Key": "rf_uwXXDGPRhp7jZIdPYV7Xrhx3tXW3" // Updated API key
+            "X-API-Key": ROBOFLOW_API_KEY
           }
         }
       );
@@ -186,6 +210,10 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
     return processingFrames.has(frameId);
   };
 
+  const hasNoGpsData = (frameId: string) => {
+    return frameWithoutGps.includes(frameId);
+  };
+
   const sortedFrames = [...frames].sort((a, b) => {
     const aName = parseInt(a.name.split(".")[0]);
     const bName = parseInt(b.name.split(".")[0]);
@@ -195,7 +223,7 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   const processAllFrames = async () => {
     // Process frames in sequence to avoid overwhelming the API
     for (const frame of sortedFrames) {
-      if (!processingFrames.has(frame.name)) {
+      if (!processingFrames.has(frame.name) && !hasNoGpsData(frame.name)) {
         await processFrame(frame);
       }
     }
@@ -216,11 +244,22 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
         </div>
       </div>
       
+      {gpsData.length === 0 && frames.length > 0 && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No GPS Data Available</AlertTitle>
+          <AlertDescription>
+            Please upload a GPS log file to match with frames before processing.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedFrames.map((frame) => {
           const frameId = frame.name;
           const gpsEntry = findGpsDataForFrame(frameId);
           const imageUrl = URL.createObjectURL(frame);
+          const noGpsMatch = hasNoGpsData(frameId);
           
           return (
             <Card key={frameId} className="overflow-hidden">
@@ -240,7 +279,7 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
                 <Button 
                   className="w-full"
                   onClick={() => processFrame(frame)}
-                  disabled={isProcessing || isFrameProcessing(frameId) || !gpsEntry}
+                  disabled={isProcessing || isFrameProcessing(frameId) || !gpsEntry || noGpsMatch}
                 >
                   {isFrameProcessing(frameId) ? (
                     <span className="flex items-center">
