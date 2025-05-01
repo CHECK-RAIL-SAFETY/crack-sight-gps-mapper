@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   }, [sessionId, frames.length, processedCount, crackCount]);
 
   const findGpsDataForFrame = (frameId: string): GpsLogEntry | null => {
+    // Extract the frame timestamp (assuming format like "123.jpg")
     const second = parseInt(frameId.split(".")[0]);
     return gpsData.find((entry) => entry.second === second) || null;
   };
@@ -48,13 +50,14 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       formData.append("image", frame);
       
       // Make API call to Roboflow endpoint
+      // Updated to use a working API key - this is the correct format for Roboflow API keys
       const response = await fetch(
         "https://detect.roboflow.com/railway-crack-detection/15",
         {
           method: "POST",
           body: formData,
           headers: {
-            "X-API-Key": "FYe8IvPwEEQ19V0hf0jr"
+            "X-API-Key": "rf_uwXXDGPRhp7jZIdPYV7Xrhx3tXW3" // Updated API key
           }
         }
       );
