@@ -23,7 +23,7 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   const [frameWithoutGps, setFrameWithoutGps] = useState<string[]>([]);
 
   // Roboflow API key
-  const ROBOFLOW_API_KEY = "rf_iLgnh9YZilWn2Zcw9vRK2DxQrzs2";
+  const ROBOFLOW_API_KEY = "FYe8IvPwEEQ19V0hf0jr";
 
   useEffect(() => {
     // Update session stats when counts change and we have a sessionId
