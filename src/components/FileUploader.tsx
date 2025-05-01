@@ -69,8 +69,8 @@ const FileUploader = ({ onFramesUploaded, onGpsLogUploaded, isUploading }: FileU
             <input
               id="frames"
               type="file"
-              webkitdirectory=""
               directory=""
+              webkitdirectory=""
               multiple
               onChange={handleFramesChange}
               className="sr-only"
