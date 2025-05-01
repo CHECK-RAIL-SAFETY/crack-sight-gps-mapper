@@ -10,7 +10,7 @@ export const createScanSession = async (name: string, description?: string): Pro
     .insert({
       name,
       description,
-      status: 'in_progress',
+      status: 'in_progress' as 'in_progress', // Type assertion to match ScanSession type
     })
     .select()
     .single();
@@ -24,7 +24,7 @@ export const createScanSession = async (name: string, description?: string): Pro
     id: data.id,
     name: data.name,
     description: data.description,
-    status: data.status,
+    status: data.status as 'in_progress' | 'completed' | 'failed',
     totalFrames: data.total_frames,
     processedFrames: data.processed_frames,
     totalCracks: data.total_cracks,
@@ -56,7 +56,7 @@ export const completeSession = async (sessionId: string): Promise<void> => {
   const { error } = await supabase
     .from('scan_sessions')
     .update({
-      status: 'completed'
+      status: 'completed' as 'completed'
     })
     .eq('id', sessionId);
   
@@ -202,7 +202,7 @@ export const getSessions = async (): Promise<ScanSession[]> => {
     id: session.id,
     name: session.name,
     description: session.description,
-    status: session.status,
+    status: session.status as 'in_progress' | 'completed' | 'failed',
     totalFrames: session.total_frames,
     processedFrames: session.processed_frames,
     totalCracks: session.total_cracks,

@@ -1,4 +1,8 @@
-import { useToast } from "@/hooks/use-toast"
+
+// This component is kept for backward compatibility
+// We're using sonner instead of this custom toaster
+
+import { useToast } from "@/hooks/use-toast"; // Using our lightweight compatibility wrapper
 import {
   Toast,
   ToastClose,
@@ -6,28 +10,11 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/components/ui/toast"
+} from "@/components/ui/toast";
 
 export function Toaster() {
-  const { toasts } = useToast()
-
-  return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
+  const { toasts } = useToast();
+  
+  // Return an empty fragment since we're using sonner
+  return null;
 }
