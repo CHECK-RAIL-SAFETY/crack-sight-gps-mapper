@@ -28,8 +28,7 @@ export const toast = {
     return sonnerToast.info(message, options);
   },
   // Legacy API compatibility
-  // @ts-ignore - for backward compatibility
-  (...args: any[]) => {
+  toast: (...args: any[]) => {
     // Forward to sonner's default toast
     return sonnerToast(args[0], args[1]);
   }
