@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,7 +68,7 @@ const FileUploader = ({ onFramesUploaded, onGpsLogUploaded, isUploading }: FileU
             <input
               id="frames"
               type="file"
-              webkitdirectory="true"
+              webkitdirectory=""
               directory=""
               multiple
               onChange={handleFramesChange}
