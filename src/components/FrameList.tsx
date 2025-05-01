@@ -1,19 +1,30 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GpsLogEntry, ProcessedFrame, Prediction } from "@/types";
 import { toast } from "sonner";
+import { saveProcessedFrame, updateSessionStats } from "@/services/supabaseService";
 
 interface FrameListProps {
   frames: File[];
   gpsData: GpsLogEntry[];
   onFrameProcess: (processedFrame: ProcessedFrame) => void;
   isProcessing: boolean;
+  sessionId?: string;
 }
 
-const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing }: FrameListProps) => {
+const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }: FrameListProps) => {
   const [processingFrames, setProcessingFrames] = useState<Set<string>>(new Set());
+  const [processedCount, setProcessedCount] = useState(0);
+  const [crackCount, setCrackCount] = useState(0);
+
+  useEffect(() => {
+    // Update session stats when counts change and we have a sessionId
+    if (sessionId) {
+      updateSessionStats(sessionId, frames.length, processedCount, crackCount)
+        .catch(error => console.error("Error updating session stats:", error));
+    }
+  }, [sessionId, frames.length, processedCount, crackCount]);
 
   const findGpsDataForFrame = (frameId: string): GpsLogEntry | null => {
     const second = parseInt(frameId.split(".")[0]);
@@ -69,7 +80,8 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing }: FrameListP
         predictions: predictions,
         hasCrack,
         confidence: predictions.length > 0 ? predictions[0].confidence : 0,
-        class: predictions.length > 0 ? predictions[0].class : ""
+        class: predictions.length > 0 ? predictions[0].class : "",
+        sessionId
       };
       
       // Process the image with bounding boxes if predictions exist
@@ -78,7 +90,21 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing }: FrameListP
         processedFrame.processedImageUrl = processedImageUrl;
       }
       
+      // Save to Supabase if we have a sessionId
+      if (sessionId) {
+        const frameId = await saveProcessedFrame(processedFrame, sessionId);
+        if (frameId) {
+          processedFrame.id = frameId;
+        }
+      }
+      
       onFrameProcess(processedFrame);
+      setProcessedCount(prevCount => prevCount + 1);
+      
+      if (hasCrack) {
+        setCrackCount(prevCount => prevCount + 1);
+      }
+      
       toast.success(`Frame ${frameId} processed successfully`);
     } catch (error) {
       console.error(`Error processing frame:`, error);
@@ -163,9 +189,30 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing }: FrameListP
     return aName - bName;
   });
 
+  const processAllFrames = async () => {
+    // Process frames in sequence to avoid overwhelming the API
+    for (const frame of sortedFrames) {
+      if (!processingFrames.has(frame.name)) {
+        await processFrame(frame);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold">Uploaded Frames</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold">Uploaded Frames</h2>
+        <div className="flex gap-2">
+          <Button 
+            onClick={processAllFrames}
+            disabled={isProcessing || processingFrames.size > 0}
+            variant="secondary"
+          >
+            Process All Frames
+          </Button>
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedFrames.map((frame) => {
           const frameId = frame.name;

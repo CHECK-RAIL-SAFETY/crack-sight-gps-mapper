@@ -9,7 +9,168 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      crack_predictions: {
+        Row: {
+          class: string
+          confidence: number
+          created_at: string
+          frame_id: string
+          height: number | null
+          id: string
+          width: number | null
+          x: number | null
+          y: number | null
+        }
+        Insert: {
+          class: string
+          confidence: number
+          created_at?: string
+          frame_id: string
+          height?: number | null
+          id?: string
+          width?: number | null
+          x?: number | null
+          y?: number | null
+        }
+        Update: {
+          class?: string
+          confidence?: number
+          created_at?: string
+          frame_id?: string
+          height?: number | null
+          id?: string
+          width?: number | null
+          x?: number | null
+          y?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crack_predictions_frame_id_fkey"
+            columns: ["frame_id"]
+            isOneToOne: false
+            referencedRelation: "processed_frames"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gps_logs: {
+        Row: {
+          accuracy: number
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          second: number
+          session_id: string
+        }
+        Insert: {
+          accuracy: number
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          second: number
+          session_id: string
+        }
+        Update: {
+          accuracy?: number
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          second?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gps_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "scan_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processed_frames: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          frame_id: string
+          has_crack: boolean
+          id: string
+          image_path: string
+          latitude: number
+          longitude: number
+          processed_image_path: string | null
+          session_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          frame_id: string
+          has_crack?: boolean
+          id?: string
+          image_path: string
+          latitude: number
+          longitude: number
+          processed_image_path?: string | null
+          session_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          frame_id?: string
+          has_crack?: boolean
+          id?: string
+          image_path?: string
+          latitude?: number
+          longitude?: number
+          processed_image_path?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processed_frames_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "scan_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_sessions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          processed_frames: number | null
+          status: string
+          total_cracks: number | null
+          total_frames: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          processed_frames?: number | null
+          status?: string
+          total_cracks?: number | null
+          total_frames?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          processed_frames?: number | null
+          status?: string
+          total_cracks?: number | null
+          total_frames?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

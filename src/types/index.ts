@@ -7,6 +7,7 @@ export interface GpsLogEntry {
 }
 
 export interface ProcessedFrame {
+  id?: string;
   frameId: string;
   imagePath: string;
   processedImageUrl?: string;
@@ -16,6 +17,7 @@ export interface ProcessedFrame {
   class?: string;
   predictions?: Prediction[];
   hasCrack: boolean;
+  sessionId?: string;
 }
 
 export interface Prediction {
@@ -34,4 +36,15 @@ export interface RoboflowResponse {
     height: number;
   };
   predictions: Prediction[];
+}
+
+export interface ScanSession {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'in_progress' | 'completed' | 'failed';
+  totalFrames: number;
+  processedFrames: number;
+  totalCracks: number;
+  createdAt: string;
 }
