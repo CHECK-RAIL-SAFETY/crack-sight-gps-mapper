@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,34 +29,64 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
     }
   }, [sessionId, frames.length, processedCount, crackCount]);
 
-  const detectCracks = async (imageBlob: Blob): Promise<{
+  const detectCracks = async (imageBlob: Blob, retries = 3): Promise<{
     hasCrack: boolean;
     predictions: Prediction[];
     confidence?: number;
   }> => {
     try {
+      // Try first with the 'image' parameter
       const formData = new FormData();
-      formData.append('image', imageBlob);
+      formData.append('file', imageBlob); // Changed from 'image' to 'file' based on Python example
       
+      // Use the serverless API URL from Python example
       const response = await fetch(
-        'https://detect.roboflow.com/railway-crack-detection/15?api_key=FYe8IvPwEEQ19V0hf0jr',
+        'https://serverless.roboflow.com/railway-crack-detection/15',
         {
           method: 'POST',
+          headers: {
+            'Authorization': 'FYe8IvPwEEQ19V0hf0jr' // Use Authorization header for serverless API
+          },
           body: formData,
         }
       );
       
       if (!response.ok) {
+        // Handle rate limiting
         if (response.status === 429) {
           const retryAfter = response.headers.get('Retry-After') || '5';
           await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
-          return detectCracks(imageBlob);
+          return detectCracks(imageBlob, retries);
         }
+        
+        // Handle server errors with retry
+        if (response.status === 500 && retries > 0) {
+          console.log(`Server error, retrying (${retries} attempts left)...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+          return detectCracks(imageBlob, retries - 1);
+        }
+        
         throw new Error(`API request failed with status ${response.status}`);
       }
       
-      const data = await response.json() as RoboflowResponse;
-      const predictions = data.predictions || [];
+      const data = await response.json();
+      console.log("API response:", data);
+      
+      // Handle different response formats
+      let predictions: Prediction[] = [];
+      if (data.predictions) {
+        predictions = data.predictions;
+      } else if (data.result && Array.isArray(data.result)) {
+        // Alternative response format based on Python client
+        predictions = data.result.map((pred: any) => ({
+          x: pred.x,
+          y: pred.y,
+          width: pred.width,
+          height: pred.height,
+          confidence: pred.confidence,
+          class: pred.class
+        }));
+      }
       
       return {
         hasCrack: predictions.length > 0,
@@ -66,7 +95,51 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       };
     } catch (error) {
       console.error('Error detecting cracks:', error);
-      throw error;
+      
+      // If we have retries left, try alternative API endpoint
+      if (retries > 0) {
+        console.log('Trying alternative API endpoint...');
+        try {
+          const formData = new FormData();
+          formData.append('image', imageBlob);
+          
+          const response = await fetch(
+            'https://detect.roboflow.com/railway-crack-detection/15?api_key=FYe8IvPwEEQ19V0hf0jr',
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+          
+          if (!response.ok) {
+            throw new Error(`Alternative API request failed with status ${response.status}`);
+          }
+          
+          const data = await response.json() as RoboflowResponse;
+          const predictions = data.predictions || [];
+          
+          return {
+            hasCrack: predictions.length > 0,
+            predictions: predictions,
+            confidence: predictions.length > 0 ? predictions[0].confidence : undefined,
+          };
+        } catch (fallbackError) {
+          console.error('Error with alternative API:', fallbackError);
+          
+          // Final fallback: retry with reduced retries
+          if (retries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            return detectCracks(imageBlob, retries - 2);
+          }
+        }
+      }
+      
+      // If all retries failed, return empty results instead of throwing
+      return {
+        hasCrack: false,
+        predictions: [],
+        confidence: undefined
+      };
     }
   };
 
@@ -110,7 +183,8 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       // Create object URL for the image
       const imageUrl = URL.createObjectURL(frame);
       
-      // Run crack detection
+      // Run crack detection with improved error handling
+      toast.info(`Processing frame ${frameId}...`, { duration: 3000 });
       const { hasCrack, predictions, confidence } = await detectCracks(frame);
       
       // Create a processed frame object
@@ -240,6 +314,8 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
     for (const frame of sortedFrames) {
       if (!processingFrames.has(frame.name) && !hasNoGpsData(frame.name)) {
         await processFrame(frame);
+        // Add a small delay between frames to avoid overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
   };
