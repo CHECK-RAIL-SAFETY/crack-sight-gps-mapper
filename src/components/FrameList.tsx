@@ -22,9 +22,9 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   const [crackCount, setCrackCount] = useState(0);
   const [frameWithoutGps, setFrameWithoutGps] = useState<string[]>([]);
 
-  // Updated Roboflow API key and URL
+  // Roboflow API configuration
   const ROBOFLOW_API_KEY = "FYe8IvPwEEQ19V0hf0jr";
-  const ROBOFLOW_API_URL = "https://serverless.roboflow.com/railway-crack-detection/15";
+  const ROBOFLOW_API_URL = "https://detect.roboflow.com/railway-crack-detection/15";
 
   useEffect(() => {
     // Update session stats when counts change and we have a sessionId
@@ -75,15 +75,17 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       const formData = new FormData();
       formData.append("image", frame);
       
-      // Make API call to Roboflow using the serverless endpoint
+      // Make API call to Roboflow
       const response = await fetch(
         ROBOFLOW_API_URL,
         {
           method: "POST",
           body: formData,
           headers: {
-            "Authorization": `API-Key ${ROBOFLOW_API_KEY}`
-          }
+            "X-API-Key": ROBOFLOW_API_KEY
+          },
+          // Add mode: 'cors' to explicitly request CORS
+          mode: 'cors'
         }
       );
       
