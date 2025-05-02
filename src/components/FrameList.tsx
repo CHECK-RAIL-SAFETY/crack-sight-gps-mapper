@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,99 +35,39 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
     predictions: Prediction[];
     confidence?: number;
   }> => {
-    const MAX_RETRIES = 3;
-    let attempt = 0;
-    
-    while (attempt < MAX_RETRIES) {
-      try {
-        attempt++;
-        console.log(`Attempt ${attempt} to detect cracks`);
-        
-        // Try serverless endpoint first (as shown in your curl example)
-        const formData = new FormData();
-        formData.append('file', imageBlob);
-        
-        const response = await fetch(
-          'https://serverless.roboflow.com/railway-crack-detection/15',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': 'FYe8IvPwEEQ19V0hf0jr'
-            },
-            body: formData,
-          }
-        );
-        
-        if (!response.ok) {
-          if (response.status === 429 && attempt < MAX_RETRIES) {
-            const retryAfter = response.headers.get('Retry-After') || '5';
-            await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
-            continue;
-          }
-          throw new Error(`Serverless API request failed with status ${response.status}`);
+    try {
+      const formData = new FormData();
+      formData.append('image', imageBlob);
+      
+      const response = await fetch(
+        'https://detect.roboflow.com/railway-crack-detection/15?api_key=FYe8IvPwEEQ19V0hf0jr',
+        {
+          method: 'POST',
+          body: formData,
         }
-        
-        const data = await response.json() as RoboflowResponse;
-        const predictions = data.predictions || [];
-        
-        return {
-          hasCrack: predictions.length > 0,
-          predictions: predictions,
-          confidence: predictions.length > 0 ? predictions[0].confidence : undefined,
-        };
-      } catch (serverlessError) {
-        console.error('Error with serverless endpoint:', serverlessError);
-        
-        // If we've already tried all attempts, or if this is the last attempt
-        if (attempt >= MAX_RETRIES) {
-          // Fall back to the original detect.roboflow.com endpoint as a last resort
-          try {
-            const formData = new FormData();
-            formData.append('image', imageBlob);
-            
-            const response = await fetch(
-              'https://detect.roboflow.com/railway-crack-detection/15?api_key=FYe8IvPwEEQ19V0hf0jr',
-              {
-                method: 'POST',
-                body: formData,
-              }
-            );
-            
-            if (!response.ok) {
-              throw new Error(`API request failed with status ${response.status}`);
-            }
-            
-            const data = await response.json() as RoboflowResponse;
-            const predictions = data.predictions || [];
-            
-            return {
-              hasCrack: predictions.length > 0,
-              predictions: predictions,
-              confidence: predictions.length > 0 ? predictions[0].confidence : undefined,
-            };
-          } catch (detectError) {
-            console.error('Error with detect endpoint:', detectError);
-            
-            // Both APIs failed, return empty predictions to prevent app crash
-            console.warn("All API attempts failed. Proceeding with no predictions.");
-            return {
-              hasCrack: false,
-              predictions: [],
-            };
-          }
+      );
+      
+      if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After') || '5';
+          await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+          return detectCracks(imageBlob);
         }
-        
-        // If we have more retries, wait before next attempt
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        throw new Error(`API request failed with status ${response.status}`);
       }
+      
+      const data = await response.json() as RoboflowResponse;
+      const predictions = data.predictions || [];
+      
+      return {
+        hasCrack: predictions.length > 0,
+        predictions: predictions,
+        confidence: predictions.length > 0 ? predictions[0].confidence : undefined,
+      };
+    } catch (error) {
+      console.error('Error detecting cracks:', error);
+      throw error;
     }
-    
-    // This should never be reached because of the return in the catch block
-    // But TypeScript needs it for type safety
-    return {
-      hasCrack: false,
-      predictions: [],
-    };
   };
 
   const findGpsDataForFrame = (frameId: string): GpsLogEntry | null => {
