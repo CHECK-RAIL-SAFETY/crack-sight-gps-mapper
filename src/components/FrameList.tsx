@@ -37,10 +37,10 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
   }> => {
     try {
       const formData = new FormData();
-      formData.append('image', imageBlob);
+      formData.append('file', imageBlob);
       
       const response = await fetch(
-        'https://detect.roboflow.com/railway-crack-detection/15?api_key=HEHme5aIMGgAPCItI2Md',
+        'https://detect.roboflow.com/railway-crack-detection/15?api_key=FYe8IvPwEEQ19V0hf0jr',
         {
           method: 'POST',
           body: formData,
