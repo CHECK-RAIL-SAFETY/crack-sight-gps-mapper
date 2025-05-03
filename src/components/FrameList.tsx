@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -209,13 +210,16 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
               typeof pred.width === 'number' && 
               typeof pred.height === 'number') {
                 
-            const x = pred.x * canvas.width;
-            const y = pred.y * canvas.height;
-            const width = pred.width * canvas.width;
-            const height = pred.height * canvas.height;
+            // The API returns pixel values directly, so we use them as is
+            // No need to multiply by canvas dimensions
+            const x = pred.x;
+            const y = pred.y;
+            const width = pred.width;
+            const height = pred.height;
             
             console.log("Drawing bounding box:", x, y, width, height);
             
+            // Draw rectangle centered on x,y with given width and height
             ctx.strokeRect(x - width/2, y - height/2, width, height);
             ctx.fillRect(x - width/2, y - height/2, width, height);
             

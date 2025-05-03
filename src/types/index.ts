@@ -21,10 +21,10 @@ export interface ProcessedFrame {
 }
 
 export interface Prediction {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
+  x?: number;  // Pixel x-coordinate of center
+  y?: number;  // Pixel y-coordinate of center
+  width?: number;  // Width in pixels
+  height?: number;  // Height in pixels
   confidence: number;
   class: string;
 }
