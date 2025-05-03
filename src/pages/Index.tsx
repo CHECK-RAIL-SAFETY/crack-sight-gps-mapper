@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FileUploader from "@/components/FileUploader";
@@ -12,8 +11,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { saveGpsLogs, completeSession } from "@/services/supabaseService";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { FileUp } from "lucide-react";
+import GpsAlert from "@/components/GpsAlert";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -182,13 +180,7 @@ const Index = () => {
             {frames.length > 0 && (
               <>
                 {gpsData.length === 0 ? (
-                  <Alert variant="default" className="bg-amber-50 border-amber-200">
-                    <FileUp className="h-4 w-4 text-amber-600" />
-                    <AlertTitle>GPS Data Required</AlertTitle>
-                    <AlertDescription>
-                      Please upload a GPS log file to match with the frames before processing.
-                    </AlertDescription>
-                  </Alert>
+                  <GpsAlert type="required" />
                 ) : (
                   <FrameList 
                     frames={frames}
