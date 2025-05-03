@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,9 +126,19 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
       };
       
       // Process the image with bounding boxes if predictions exist
-      if (hasCrack) {
-        const processedImageUrl = await drawBoundingBoxes(frame, predictions, {width: 0, height: 0});
+      if (hasCrack && predictions.length > 0) {
+        console.log("Drawing bounding boxes for frame:", frameId, "with predictions:", predictions);
+        // Get the image dimensions for drawing bounding boxes accurately
+        const img = new Image();
+        img.src = imageUrl;
+        await new Promise(resolve => {
+          img.onload = resolve;
+        });
+        
+        const dimensions = { width: img.width, height: img.height };
+        const processedImageUrl = await drawBoundingBoxes(frame, predictions, dimensions);
         processedFrame.processedImageUrl = processedImageUrl;
+        console.log("Processed image URL created:", processedImageUrl ? "yes" : "no");
       }
       
       // Save to Supabase if we have a sessionId
@@ -174,12 +183,17 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
         const ctx = canvas.getContext("2d");
         
         if (!ctx) {
+          console.error("Could not get canvas context");
           resolve(URL.createObjectURL(imageFile));
           return;
         }
         
+        // Use actual image dimensions from loaded image
         canvas.width = img.width;
         canvas.height = img.height;
+        
+        console.log("Canvas dimensions:", canvas.width, "x", canvas.height);
+        console.log("Drawing original image to canvas");
         
         // Draw the original image
         ctx.drawImage(img, 0, 0);
@@ -200,6 +214,8 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
             const width = pred.width * canvas.width;
             const height = pred.height * canvas.height;
             
+            console.log("Drawing bounding box:", x, y, width, height);
+            
             ctx.strokeRect(x - width/2, y - height/2, width, height);
             ctx.fillRect(x - width/2, y - height/2, width, height);
             
@@ -211,12 +227,20 @@ const FrameList = ({ frames, gpsData, onFrameProcess, isProcessing, sessionId }:
             const text = `${pred.class} ${(pred.confidence * 100).toFixed(1)}%`;
             ctx.strokeText(text, x - width/2, y - height/2 - 5);
             ctx.fillText(text, x - width/2, y - height/2 - 5);
+          } else {
+            console.warn("Invalid prediction data:", pred);
           }
         });
         
-        // Convert canvas to URL
-        const processedImageUrl = canvas.toDataURL("image/jpeg");
+        // Convert canvas to URL with high quality
+        const processedImageUrl = canvas.toDataURL("image/jpeg", 0.95);
+        console.log("Processed image URL created with length:", processedImageUrl.length);
         resolve(processedImageUrl);
+      };
+      
+      img.onerror = () => {
+        console.error("Error loading image for bounding box drawing");
+        resolve(URL.createObjectURL(imageFile));
       };
     });
   };

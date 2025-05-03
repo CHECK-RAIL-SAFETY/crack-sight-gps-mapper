@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { ProcessedFrame } from "@/types";
@@ -48,14 +49,20 @@ const MapView = ({ results }: MapViewProps) => {
         iconSize: [16, 16],
       });
       
+      // Choose the appropriate image source
+      const imageSrc = result.hasCrack && result.processedImageUrl 
+        ? result.processedImageUrl 
+        : result.imagePath;
+      
       const marker = L.marker([result.latitude, result.longitude], { icon })
         .addTo(mapRef.current!);
       
       marker.bindPopup(`
         <div class="text-center">
-          <img src="${result.hasCrack ? result.processedImageUrl : result.imagePath}" 
+          <img src="${imageSrc}" 
                alt="Frame ${result.frameId}" 
-               class="w-48 h-auto mb-2" />
+               class="w-48 h-auto mb-2"
+               onerror="this.onerror=null; this.src='${result.imagePath}';" />
           <div class="font-bold">Frame: ${result.frameId}</div>
           <div class="text-sm">
             ${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}

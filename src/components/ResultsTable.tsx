@@ -3,7 +3,7 @@ import { ProcessedFrame } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface ResultsTableProps {
@@ -12,6 +12,11 @@ interface ResultsTableProps {
 
 const ResultsTable = ({ results }: ResultsTableProps) => {
   const [selectedFrame, setSelectedFrame] = useState<ProcessedFrame | null>(null);
+
+  useEffect(() => {
+    // Log results for debugging
+    console.log("Results in ResultsTable:", results);
+  }, [results]);
 
   if (results.length === 0) {
     return (
@@ -51,80 +56,104 @@ const ResultsTable = ({ results }: ResultsTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {results.map((result) => (
-                <TableRow key={result.frameId}>
-                  <TableCell className="font-medium">{result.frameId}</TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <div 
-                          className="h-16 w-28 bg-muted rounded cursor-pointer overflow-hidden"
-                          onClick={() => setSelectedFrame(result)}
-                        >
-                          <img 
-                            src={result.hasCrack ? result.processedImageUrl : result.imagePath} 
-                            alt={`Frame ${result.frameId}`}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <div className="aspect-video w-full overflow-hidden rounded-md">
-                          <img 
-                            src={result.hasCrack ? result.processedImageUrl : result.imagePath} 
-                            alt={`Frame ${result.frameId} Full`}
-                            className="h-full w-full object-contain"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm mt-4">
-                          <div>
-                            <p className="text-muted-foreground mb-1">Frame ID</p>
-                            <p className="font-medium">{result.frameId}</p>
+              {results.map((result) => {
+                // Choose the appropriate image source - processed image for cracks, original otherwise
+                const imageSrc = result.hasCrack && result.processedImageUrl 
+                  ? result.processedImageUrl 
+                  : result.imagePath;
+                
+                return (
+                  <TableRow key={result.frameId}>
+                    <TableCell className="font-medium">{result.frameId}</TableCell>
+                    <TableCell>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <div 
+                            className="h-16 w-28 bg-muted rounded cursor-pointer overflow-hidden"
+                            onClick={() => setSelectedFrame(result)}
+                          >
+                            <img 
+                              src={imageSrc} 
+                              alt={`Frame ${result.frameId}`}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                console.error("Error loading image:", imageSrc);
+                                e.currentTarget.src = result.imagePath; // Fallback to original image if processed fails
+                              }}
+                            />
                           </div>
-                          <div>
-                            <p className="text-muted-foreground mb-1">Status</p>
-                            <p className="font-medium">
-                              {result.hasCrack ? (
-                                <span className="text-destructive">Crack Detected</span>
-                              ) : (
-                                <span className="text-green-500">No Crack</span>
-                              )}
-                            </p>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <div className="aspect-video w-full overflow-hidden rounded-md">
+                            <img 
+                              src={imageSrc} 
+                              alt={`Frame ${result.frameId} Full`}
+                              className="h-full w-full object-contain"
+                              onError={(e) => {
+                                console.error("Error loading full image:", imageSrc);
+                                e.currentTarget.src = result.imagePath; // Fallback to original image if processed fails
+                              }}
+                            />
                           </div>
-                          <div>
-                            <p className="text-muted-foreground mb-1">Coordinates</p>
-                            <p className="font-medium">
-                              {result.latitude.toFixed(6)}, {result.longitude.toFixed(6)}
-                            </p>
-                          </div>
-                          {result.hasCrack && (
+                          <div className="grid grid-cols-2 gap-4 text-sm mt-4">
                             <div>
-                              <p className="text-muted-foreground mb-1">Confidence</p>
+                              <p className="text-muted-foreground mb-1">Frame ID</p>
+                              <p className="font-medium">{result.frameId}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Status</p>
                               <p className="font-medium">
-                                {(result.confidence! * 100).toFixed(1)}%
+                                {result.hasCrack ? (
+                                  <span className="text-destructive">Crack Detected</span>
+                                ) : (
+                                  <span className="text-green-500">No Crack</span>
+                                )}
                               </p>
                             </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                  <TableCell>{result.latitude.toFixed(6)}</TableCell>
-                  <TableCell>{result.longitude.toFixed(6)}</TableCell>
-                  <TableCell>
-                    {result.hasCrack ? (
-                      <Badge variant="destructive">Crack Detected</Badge>
-                    ) : (
-                      <Badge variant="secondary">No Crack</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {result.hasCrack
-                      ? `${(result.confidence! * 100).toFixed(1)}%`
-                      : "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
+                            <div>
+                              <p className="text-muted-foreground mb-1">Coordinates</p>
+                              <p className="font-medium">
+                                {result.latitude.toFixed(6)}, {result.longitude.toFixed(6)}
+                              </p>
+                            </div>
+                            {result.hasCrack && (
+                              <div>
+                                <p className="text-muted-foreground mb-1">Confidence</p>
+                                <p className="font-medium">
+                                  {(result.confidence! * 100).toFixed(1)}%
+                                </p>
+                              </div>
+                            )}
+                            
+                            {result.hasCrack && result.predictions && (
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground mb-1">Predictions</p>
+                                <pre className="text-xs bg-muted p-2 rounded overflow-auto">
+                                  {JSON.stringify(result.predictions, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                    <TableCell>{result.latitude.toFixed(6)}</TableCell>
+                    <TableCell>{result.longitude.toFixed(6)}</TableCell>
+                    <TableCell>
+                      {result.hasCrack ? (
+                        <Badge variant="destructive">Crack Detected</Badge>
+                      ) : (
+                        <Badge variant="secondary">No Crack</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {result.hasCrack
+                        ? `${(result.confidence! * 100).toFixed(1)}%`
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
