@@ -142,8 +142,15 @@ const Index = () => {
 
   return (
     <div className="container py-8 max-w-7xl">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">tracksense.</h1>
+      <header className="mb-8 flex flex-col items-center text-center">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <img 
+            src="/lovable-uploads/0abec741-34d7-4460-baca-3eef50f6755d.png" 
+            alt="tracksense logo" 
+            className="h-10 w-auto"
+          />
+          <h1 className="text-4xl font-bold">tracksense.</h1>
+        </div>
         <p className="text-muted-foreground">
           Upload frames and GPS data to detect railway cracks using AI
         </p>
