@@ -29,7 +29,7 @@ const Index = () => {
   const handleFramesUploaded = (files: FileList) => {
     // Convert FileList to array and filter for image files
     const imageFiles = Array.from(files).filter(file => 
-      file.type.startsWith('image/') && file.name.match(/^\d+\.jpg$/i)
+      file.type.startsWith('image/') && file.name.match(/^\d+\.(jpg|jpeg|png)$/i)
     );
     
     setFrames(imageFiles);

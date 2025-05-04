@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -54,7 +55,7 @@ const FileUploader = ({ onFramesUploaded, onGpsLogUploaded, isUploading }: FileU
           <div>
             <h3 className="text-lg font-semibold mb-1">Upload Frames</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Upload a folder of images named as &lt;second&gt;.jpg
+              Upload a folder of images named as &lt;second&gt;.jpg/jpeg/png
             </p>
           </div>
           <div className="w-full">
