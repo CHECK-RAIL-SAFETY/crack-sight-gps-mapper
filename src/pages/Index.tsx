@@ -143,7 +143,7 @@ const Index = () => {
   return (
     <div className="container py-8 max-w-7xl">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Railway Crack Detection</h1>
+        <h1 className="text-4xl font-bold mb-2">tracksense.</h1>
         <p className="text-muted-foreground">
           Upload frames and GPS data to detect railway cracks using AI
         </p>
