@@ -3,14 +3,52 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProcessedFrame, GpsLogEntry, Prediction, ScanSession } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 
+// Temporary interfaces until Supabase types are regenerated
+interface DbScanSession {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  total_frames: number | null;
+  processed_frames: number | null;
+  total_cracks: number | null;
+  created_at: string;
+}
+
+interface DbProcessedFrame {
+  id: string;
+  session_id: string;
+  frame_id: string;
+  image_path: string | null;
+  processed_image_path: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  confidence: number | null;
+  has_crack: boolean;
+  created_at: string;
+  crack_predictions?: DbCrackPrediction[];
+}
+
+interface DbCrackPrediction {
+  id: string;
+  frame_id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  confidence: number;
+  class: string;
+  created_at: string;
+}
+
 // Sessions
 export const createScanSession = async (name: string, description?: string): Promise<ScanSession | null> => {
   const { data, error } = await supabase
-    .from('scan_sessions')
+    .from('scan_sessions' as any)
     .insert({
       name,
       description,
-      status: 'in_progress' as 'in_progress', // Type assertion to match ScanSession type
+      status: 'in_progress',
     })
     .select()
     .single();
@@ -20,15 +58,16 @@ export const createScanSession = async (name: string, description?: string): Pro
     return null;
   }
   
+  const dbSession = data as unknown as DbScanSession;
   return {
-    id: data.id,
-    name: data.name,
-    description: data.description,
-    status: data.status as 'in_progress' | 'completed' | 'failed',
-    totalFrames: data.total_frames,
-    processedFrames: data.processed_frames,
-    totalCracks: data.total_cracks,
-    createdAt: data.created_at
+    id: dbSession.id,
+    name: dbSession.name,
+    description: dbSession.description,
+    status: dbSession.status as 'in_progress' | 'completed' | 'failed',
+    totalFrames: dbSession.total_frames || 0,
+    processedFrames: dbSession.processed_frames || 0,
+    totalCracks: dbSession.total_cracks || 0,
+    createdAt: dbSession.created_at
   };
 };
 
@@ -39,7 +78,7 @@ export const updateSessionStats = async (
   totalCracks: number
 ): Promise<void> => {
   const { error } = await supabase
-    .from('scan_sessions')
+    .from('scan_sessions' as any)
     .update({
       total_frames: totalFrames,
       processed_frames: processedFrames,
@@ -54,9 +93,9 @@ export const updateSessionStats = async (
 
 export const completeSession = async (sessionId: string): Promise<void> => {
   const { error } = await supabase
-    .from('scan_sessions')
+    .from('scan_sessions' as any)
     .update({
-      status: 'completed' as 'completed'
+      status: 'completed'
     })
     .eq('id', sessionId);
   
@@ -122,7 +161,7 @@ export const saveProcessedFrame = async (
   
   // Insert frame data into the database
   const { data, error } = await supabase
-    .from('processed_frames')
+    .from('processed_frames' as any)
     .insert({
       session_id: sessionId,
       frame_id: frame.frameId,
@@ -141,10 +180,12 @@ export const saveProcessedFrame = async (
     return null;
   }
   
+  const frameData = data as unknown as DbProcessedFrame;
+  
   // If there are predictions, save them as well
   if (frame.hasCrack && frame.predictions && frame.predictions.length > 0) {
     const predictionsToInsert = frame.predictions.map(prediction => ({
-      frame_id: data.id,
+      frame_id: frameData.id,
       x: prediction.x,
       y: prediction.y,
       width: prediction.width,
@@ -154,7 +195,7 @@ export const saveProcessedFrame = async (
     }));
     
     const { error: predictionsError } = await supabase
-      .from('crack_predictions')
+      .from('crack_predictions' as any)
       .insert(predictionsToInsert);
     
     if (predictionsError) {
@@ -162,7 +203,7 @@ export const saveProcessedFrame = async (
     }
   }
   
-  return data.id;
+  return frameData.id;
 };
 
 // GPS Logs
@@ -179,7 +220,7 @@ export const saveGpsLogs = async (
   }));
   
   const { error } = await supabase
-    .from('gps_logs')
+    .from('gps_logs' as any)
     .insert(logsToInsert);
   
   if (error) {
@@ -189,7 +230,7 @@ export const saveGpsLogs = async (
 
 export const getSessions = async (): Promise<ScanSession[]> => {
   const { data, error } = await supabase
-    .from('scan_sessions')
+    .from('scan_sessions' as any)
     .select('*')
     .order('created_at', { ascending: false });
   
@@ -198,21 +239,22 @@ export const getSessions = async (): Promise<ScanSession[]> => {
     return [];
   }
   
-  return data.map(session => ({
+  const sessions = data as unknown as DbScanSession[];
+  return sessions.map(session => ({
     id: session.id,
     name: session.name,
     description: session.description,
     status: session.status as 'in_progress' | 'completed' | 'failed',
-    totalFrames: session.total_frames,
-    processedFrames: session.processed_frames,
-    totalCracks: session.total_cracks,
+    totalFrames: session.total_frames || 0,
+    processedFrames: session.processed_frames || 0,
+    totalCracks: session.total_cracks || 0,
     createdAt: session.created_at
   }));
 };
 
 export const getSessionFrames = async (sessionId: string): Promise<ProcessedFrame[]> => {
   const { data, error } = await supabase
-    .from('processed_frames')
+    .from('processed_frames' as any)
     .select(`
       *,
       crack_predictions (*)
@@ -224,7 +266,8 @@ export const getSessionFrames = async (sessionId: string): Promise<ProcessedFram
     return [];
   }
   
-  return data.map(frame => ({
+  const frames = data as unknown as DbProcessedFrame[];
+  return frames.map(frame => ({
     id: frame.id,
     frameId: frame.frame_id,
     imagePath: frame.image_path,
@@ -233,7 +276,7 @@ export const getSessionFrames = async (sessionId: string): Promise<ProcessedFram
     longitude: frame.longitude,
     confidence: frame.confidence,
     hasCrack: frame.has_crack,
-    predictions: frame.crack_predictions,
+    predictions: frame.crack_predictions || [],
     sessionId: frame.session_id
   }));
 };
