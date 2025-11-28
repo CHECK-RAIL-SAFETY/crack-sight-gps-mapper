@@ -22,11 +22,6 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { session } = useAuth();
 
-  // If user is already logged in, redirect to home page
-  if (session) {
-    return <Navigate to="/" />;
-  }
-
   const loginForm = useForm<AuthFormValues>({
     defaultValues: {
       email: "",
@@ -41,6 +36,11 @@ const Auth = () => {
       username: "",
     },
   });
+
+  // If user is already logged in, redirect to home page
+  if (session) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleLogin = async (values: AuthFormValues) => {
     setIsLoading(true);
